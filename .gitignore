@@ -127,3 +127,11 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+######### Ts added:
+
+# folder created by Pycharm
+.idea/
+
+# folder that the program itself creates at runtime
+test/integration/fixtures/copied

@@ -1,117 +1,72 @@
 # __main__.py
 
 """
-A program to to repair a .flac file which tag information can't be read by Clementine audio player.
+A script to to repair a .flac file which tag information can't be read by Clementine audio player.
 
 Usage: flac_repair.py <flac file>
+
+Prerequisites: Installed programs 'sox' and 'mutagen'
 """
-import os
-import sys
 from argparse import ArgumentParser
-from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import List
+
 import mutagen
 import mutagen.flac
-from datetime import date
 import subprocess
+import os
 
 
-
-def main():
+def fetch_file_name() -> str:
     parser = ArgumentParser(description=__doc__)
     parser.add_argument('flac_file',
                         type=str,
                         help='Name of the flac audio file')
     args = parser.parse_args()
+    return args.flac_file
 
-    # TODO check if file exists
-    folder = os.path.dirname(args.flac_file)
-    # print(folder)
 
-    flac_file = mutagen.File(args.flac_file)
-    # TODO Check if it's really a flac file
+def fetch_flac_file(file_name) -> mutagen.File:
+    if not os.path.isfile(file_name):
+        raise RuntimeError(f'File {file_name} does not exist')
+    flac_file = mutagen.File(file_name)
+    if type(flac_file) != mutagen.flac.FLAC:
+        raise RuntimeError(f'File {file_name} is not a flac file')
+    return flac_file
 
-    # Delete all tag information
-    # mutagen.flac.delete(args.flac_file)
 
-    # Print out all tag information
-    # for frame_id in flac_file.keys():
-    #     print(f"{frame_id} -> {flac_file.get(frame_id)}")
-
-    fetch_first_picture(flac_file)
-
-    # extract_first_picture(flac_file, folder)
-
+def copy_flac_to_tmp_file(file_name) -> str:
     # Copy with "sox" the flac file to '_.flac' (into the same folder)
-    subprocess.run(['sox', args.flac_file, folder + os.sep + '_.flac'])
-
-    # frame_ids = set([s[:4] for s in mp3_file.tags.keys()])
-    # for frame_id in frame_ids:
-    #     copy_frame(mp3_file, flac_file, frame_id)
-    # copy_picture(mp3_file, flac_file)
-    # set_description(flac_file)
-    # flac_file.save()
-
-def extract_first_picture(flac_file, folder):
-    if flac_file.pictures:
-        picture = flac_file.pictures[0]
-        with open(folder + os.sep + picture.desc, 'wb') as f:
-            f.write(picture.data)
-
-def fetch_first_picture(flac_file):
-    if flac_file.pictures:
-        # global picture
-        picture = flac_file.pictures[0]
-        global picture_type
-        picture_type = picture.type
-        global picture_mime
-        picture_mime = picture.mime
-        global picture_name
-        picture_name = picture.desc
-        global picture_data
-        picture_data = picture.data
-        print(f'picture_type {picture_type}')
-        print(f'mime {picture_mime}')
-        print(f'picture_name {picture_name}')
-        # print(f'picture_data {picture_data}')
+    tmp_file_name = os.path.dirname(file_name) + os.sep + '_.flac'
+    subprocess.run(['sox', file_name, tmp_file_name])
+    return tmp_file_name
 
 
-
-def copy_frame(mp3_file, flac_file, frame_id):
-    field_name = frame_id_mapping.get(frame_id)
-    if field_name:
-        content = mp3_file.tags.get(frame_id) and mp3_file.tags.get(frame_id).text[0]
-        if content:
-            flac_file[field_name] = str(content)
-
-
-def copy_picture(mp3_file: mutagen.File, flac_file: mutagen.File):
-    apic_list = mp3_file.tags.getall('APIC')
-    if apic_list:
-        first_apic = apic_list[0]
-        if first_apic:
-            set_picture(flac_file, first_apic.type, first_apic.mime, first_apic.desc, first_apic.data)
+def save_pictures_of_tmp_file(pictures: List[mutagen.flac.Picture], tmp_file_name: str):
+    tmp_flac_file = mutagen.File(tmp_file_name)
+    tmp_flac_file.clear_pictures()
+    if pictures:
+        for picture in pictures:
+            tmp_flac_file.add_picture(picture)
+    tmp_flac_file.save()
 
 
-def set_picture(flac_file: mutagen.File, type, mime, description, picture_data):
-    picture = mutagen.flac.Picture()
-    picture.type = type
-    picture.mime = mime
-    picture.desc = description
-    picture.data = picture_data
-    update_picture(flac_file, picture)
+def main():
+    file_name = fetch_file_name()
+    flac_file = fetch_flac_file(file_name)
 
+    ## Delete all tag information
+    # mutagen.flac.delete(file_name)
 
-def update_picture(flac_file: mutagen.File, picture: mutagen.flac.Picture):
-    flac_file.clear_pictures()
-    flac_file.add_picture(picture)
+    ## Print out all tag information
+    # for frame_id in flac_file.keys():
+    #    print(f"{frame_id} -> {flac_file.get(frame_id)}")
 
+    tmp_file_name = copy_flac_to_tmp_file(file_name)
 
-def set_description(flac_file, comment: str = str(date.today())):
-    flac_file['DESCRIPTION'] = comment
+    save_pictures_of_tmp_file(flac_file.pictures, tmp_file_name)
 
-
-
+    # Rename tmp_file to the name of the to be repaired flag file
+    os.rename(tmp_file_name, file_name)
 
 
 if __name__ == '__main__':

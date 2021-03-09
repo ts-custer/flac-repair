@@ -35,7 +35,7 @@ def fetch_flac_file(file_name) -> mutagen.File:
 
 
 def copy_flac_to_tmp_file(file_name) -> str:
-    # Copy with "sox" the flac file to '_.flac' (into the same folder)
+    # Copy with "sox" the flac file to 'flac_repair.flac' (into the same folder)
     tmp_file_name = os.path.dirname(file_name) + os.sep + 'flac_repair.flac'
     subprocess.run(['sox', file_name, tmp_file_name])
     return tmp_file_name

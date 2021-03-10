@@ -1,4 +1,4 @@
-# __main__.py
+#!/usr/bin/python3
 
 """
 A script to to repair a .flac file which tag information can't be read by Clementine audio player.
@@ -8,6 +8,7 @@ Usage: flac_repair.py <flac file>
 Prerequisites: Installed programs 'sox' and 'mutagen'
 """
 from argparse import ArgumentParser
+from pathlib import Path
 from typing import List
 
 import mutagen
@@ -34,9 +35,16 @@ def fetch_flac_file(file_name) -> mutagen.File:
     return flac_file
 
 
+def fetch_absolute_directory_of_file(file_name: str) -> str:
+    abs_path = os.path.abspath(file_name)
+    file_name_length = len(Path(file_name).name)
+    return abs_path[:-file_name_length]
+
+
 def copy_flac_to_tmp_file(file_name) -> str:
     # Copy with "sox" the flac file to 'flac_repair.flac' (into the same folder)
-    tmp_file_name = os.path.dirname(file_name) + os.sep + 'flac_repair.flac'
+    directory = fetch_absolute_directory_of_file(file_name)
+    tmp_file_name = directory + 'flac_repair.flac'
     subprocess.run(['sox', file_name, tmp_file_name])
     return tmp_file_name
 
@@ -67,6 +75,8 @@ def main():
 
     # Rename tmp_file to the name of the to be repaired flag file
     os.rename(tmp_file_name, file_name)
+
+    print(f'"{file_name}" repaired.')
 
 
 if __name__ == '__main__':
